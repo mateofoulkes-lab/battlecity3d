@@ -1,21 +1,22 @@
-import { joinRoom, selfId } from 'https://esm.run/trystero';
+import { joinRoom, selfId } from 'https://esm.sh/trystero@0.25.3';
 import { BattleGame } from './game.js';
 
-// Volvemos a la estrategia default (Nostr), que fue la base que conectó correctamente al principio.
-// Este APP_ID queda fijo para que todos los clientes entren al mismo namespace.
+// Misma versión y forma de conexión que la prueba multiplayer de Soquetin que funciona.
+// IMPORTANTE: APP_ID y versión de Trystero quedan fijos.
 const APP_ID='battlecity3d-mateofoulkes-lab-v1';
-const BUILD='2026.08.10.1852';
+const BUILD='v0.9';
 const PALETTE=['#f4c542','#42c96f','#4da3ff','#ef5b5b','#b768ff','#ff8a38','#29d6cf','#f06bc2'];
 const MODES={deathmatch:'Deathmatch','team-deathmatch':'Team Deathmatch',ctf:'Captura la bandera'};
 const $=s=>document.querySelector(s);
 const screens={home:$('#homeScreen'),lobby:$('#lobbyScreen'),game:$('#gameScreen')};
-const state={name:'',roomCode:'',room:null,actions:{},isCreator:false,players:new Map(),adminId:null,mode:'deathmatch',game:null,joinedAt:0,color:localStorage.getItem('battlecity3d-color')||PALETTE[0],tankClass:localStorage.getItem('battlecity3d-class')||'assault',peerCount:0};
+const state={name:'',roomCode:'',room:null,actions:{},isCreator:false,players:new Map(),adminId:null,mode:'deathmatch',game:null,joinedAt:0,color:localStorage.getItem('battlecity3d-color')||PALETTE[0],tankClass:localStorage.getItem('battlecity3d-class')||'assault',peerCount:0,helloTimer:null};
 
 function showScreen(name){Object.entries(screens).forEach(([k,el])=>el.classList.toggle('hidden',k!==name));}
 function normalizeCode(v){return v.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6)}
 function makeCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',a=new Uint32Array(6);crypto.getRandomValues(a);return [...a].map(n=>chars[n%chars.length]).join('')}
 function presence(){return{id:selfId,name:state.name,creator:state.isCreator,joinedAt:state.joinedAt,color:state.color,tankClass:state.tankClass,build:BUILD}}
 function esc(s){return String(s).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]))}
+function peerCount(){try{return Object.keys(state.room?.getPeers?.()||{}).length}catch{return 0}}
 
 $('#nameInput').value=localStorage.getItem('battlecity3d-name')||'';
 $('#roomCodeInput').addEventListener('input',e=>e.target.value=normalizeCode(e.target.value));
@@ -24,36 +25,64 @@ $('#joinRoomBtn').addEventListener('click',()=>enterRoom(false));
 $('#leaveRoomBtn').addEventListener('click',leaveRoom);
 $('#backLobbyBtn').addEventListener('click',()=>{state.game?.stop();state.game=null;$('#matchOverlay').classList.add('hidden');showScreen('lobby');renderLobby()});
 
-document.querySelectorAll('.mode-card').forEach(btn=>btn.addEventListener('click',()=>{if(selfId!==state.adminId)return;state.mode=btn.dataset.mode;state.actions.config.send({mode:state.mode});renderLobby()}));
-document.querySelectorAll('.class-card').forEach(btn=>btn.addEventListener('click',()=>{state.tankClass=btn.dataset.class;localStorage.setItem('battlecity3d-class',state.tankClass);state.players.set(selfId,presence());state.actions.presence?.send(presence());renderLobby()}));
+document.querySelectorAll('.mode-card').forEach(btn=>btn.addEventListener('click',()=>{if(selfId!==state.adminId)return;state.mode=btn.dataset.mode;state.actions.config?.send({mode:state.mode});renderLobby()}));
+document.querySelectorAll('.class-card').forEach(btn=>btn.addEventListener('click',()=>{state.tankClass=btn.dataset.class;localStorage.setItem('battlecity3d-class',state.tankClass);state.players.set(selfId,presence());state.actions.presence?.send(presence()).catch?.(()=>{});renderLobby()}));
 
 function buildColorPicker(){const root=$('#colorPicker');root.innerHTML='';PALETTE.forEach(color=>{const b=document.createElement('button');b.className='color-swatch';b.style.background=color;b.dataset.color=color;b.title=color;b.addEventListener('click',()=>selectColor(color));root.appendChild(b)})}
 buildColorPicker();
-function selectColor(color){const taken=[...state.players.entries()].some(([id,p])=>id!==selfId&&p.color===color);if(taken)return;state.color=color;localStorage.setItem('battlecity3d-color',color);state.players.set(selfId,presence());state.actions.presence?.send(presence());renderLobby()}
-function reconcileOwnColor(){const conflicts=[...state.players.entries()].filter(([id,p])=>id!==selfId&&p.color===state.color).map(([id])=>id);if(!conflicts.length)return;const winner=[selfId,...conflicts].sort()[0];if(winner===selfId)return;const used=new Set([...state.players.entries()].filter(([id])=>id!==selfId).map(([,p])=>p.color));state.color=PALETTE.find(c=>!used.has(c))||PALETTE[0];localStorage.setItem('battlecity3d-color',state.color);state.players.set(selfId,presence());state.actions.presence?.send(presence())}
+function selectColor(color){const taken=[...state.players.entries()].some(([id,p])=>id!==selfId&&p.color===color);if(taken)return;state.color=color;localStorage.setItem('battlecity3d-color',color);state.players.set(selfId,presence());state.actions.presence?.send(presence()).catch?.(()=>{});renderLobby()}
+function reconcileOwnColor(){const conflicts=[...state.players.entries()].filter(([id,p])=>id!==selfId&&p.color===state.color).map(([id])=>id);if(!conflicts.length)return;const winner=[selfId,...conflicts].sort()[0];if(winner===selfId)return;const used=new Set([...state.players.entries()].filter(([id])=>id!==selfId).map(([,p])=>p.color));state.color=PALETTE.find(c=>!used.has(c))||PALETTE[0];localStorage.setItem('battlecity3d-color',state.color);state.players.set(selfId,presence());state.actions.presence?.send(presence()).catch?.(()=>{})}
 
 $('#startGameBtn').addEventListener('click',()=>{if(selfId!==state.adminId||state.players.size<2)return;const payload={mode:state.mode,seed:crypto.getRandomValues(new Uint32Array(1))[0],startedAt:Date.now()};state.actions.start.send(payload);beginGame(payload)});
 
-async function enterRoom(create){
+function enterRoom(create){
   const name=$('#nameInput').value.trim();if(!name){$('#homeStatus').textContent='Poné un nombre primero.';return}
-  const code=create?makeCode():normalizeCode($('#roomCodeInput').value);if(!create&&code.length<4){$('#homeStatus').textContent='Ingresá el código de la sala.';return}
-  if(state.room){try{state.room.leave()}catch{}}
-  state.name=name.slice(0,14);state.roomCode=code;state.isCreator=create;state.joinedAt=Date.now();state.peerCount=0;localStorage.setItem('battlecity3d-name',state.name);$('#homeStatus').textContent='Conectando por WebRTC…';
+  const code=create?makeCode():normalizeCode($('#roomCodeInput').value);if(!create&&code.length!==6){$('#homeStatus').textContent='El código debe tener 6 caracteres.';return}
+  cleanupRoom();
+  state.name=name.slice(0,14);state.roomCode=code;state.isCreator=create;state.joinedAt=Date.now();state.peerCount=0;
+  localStorage.setItem('battlecity3d-name',state.name);$('#homeStatus').textContent='Conectando por WebRTC…';
   try{
-    state.room=joinRoom({appId:APP_ID},code);
-    state.players.clear();state.players.set(selfId,presence());state.adminId=create?selfId:null;setupNetwork();renderLobby();showScreen('lobby');
-    state.actions.presence.send(presence());
-    // Repetimos presencia durante unos segundos para cubrir el tiempo de descubrimiento/señalización.
-    [500,1500,3000,5000].forEach(ms=>setTimeout(()=>{if(state.room)state.actions.presence?.send(presence())},ms));
-    setTimeout(()=>{electAdmin();reconcileOwnColor();renderLobby()},700);
-  }catch(err){console.error(err);$('#homeStatus').textContent='No se pudo abrir la sala.'}
+    state.room=joinRoom({appId:APP_ID},code,{
+      onJoinError:({error})=>{
+        console.warn('BattleCity join error',error);
+        $('#lobbyStatus').textContent='ERROR P2P · '+(error?.message||'falló la señalización');
+      }
+    });
+    state.players.clear();state.players.set(selfId,presence());state.adminId=create?selfId:null;
+    setupNetwork();
+    showScreen('lobby');renderLobby();
+    announcePresence();
+    // Igual que Soquetin: el peer real manda. El heartbeat sólo cubre joins tardíos.
+    state.helloTimer=setInterval(()=>{if(!state.room)return;announcePresence();state.peerCount=peerCount();renderLobby()},1800);
+    setTimeout(()=>{if(state.room&&peerCount()===0){$('#lobbyStatus').textContent=`Esperando otro navegador en ${code} · 0 peers · ${BUILD}`}},3500);
+  }catch(err){console.error(err);$('#homeStatus').textContent='No se pudo abrir la sala: '+(err?.message||err)}
+}
+
+function announcePresence(target){
+  if(!state.actions.presence)return;
+  const p=state.actions.presence.send(presence(),target?{target}:undefined);
+  p?.catch?.(()=>{});
 }
 
 function setupNetwork(){
   const r=state.room;
-  const presence=r.makeAction('presence'),config=r.makeAction('config'),start=r.makeAction('start-game'),tankState=r.makeAction('tank-state'),shoot=r.makeAction('shoot'),destroy=r.makeAction('destroy-block'),hit=r.makeAction('tank-hit'),power=r.makeAction('power'),flag=r.makeAction('flag'),match=r.makeAction('match');
+  // Namespaces cortos y simples. Evitamos cualquier diferencia con la prueba estable.
+  const presence=r.makeAction('presence');
+  const config=r.makeAction('config');
+  const start=r.makeAction('start');
+  const tankState=r.makeAction('tank');
+  const shoot=r.makeAction('shoot');
+  const destroy=r.makeAction('block');
+  const hit=r.makeAction('hit');
+  const power=r.makeAction('power');
+  const flag=r.makeAction('flag');
+  const match=r.makeAction('match');
   state.actions={presence,config,start,tankState,shoot,destroy,hit,power,flag,match};
-  presence.onMessage=(data,{peerId})=>{state.players.set(peerId,{...data,id:peerId});state.peerCount=Object.keys(r.getPeers?.()||{}).length;electAdmin();reconcileOwnColor();renderLobby()};
+
+  presence.onMessage=(data,{peerId})=>{
+    if(!peerId)return;
+    state.players.set(peerId,{...data,id:peerId});state.peerCount=peerCount();electAdmin();reconcileOwnColor();renderLobby();
+  };
   config.onMessage=(data,{peerId})=>{if(peerId!==state.adminId)return;state.mode=data.mode||state.mode;renderLobby()};
   start.onMessage=(data,{peerId})=>{if(peerId!==state.adminId)return;beginGame(data)};
   tankState.onMessage=(data,{peerId})=>state.game?.receiveState(peerId,data);
@@ -63,14 +92,18 @@ function setupNetwork(){
   power.onMessage=(data,{peerId})=>state.game?.receivePower(data,peerId);
   flag.onMessage=(data,{peerId})=>state.game?.receiveFlag(data,peerId);
   match.onMessage=(data,{peerId})=>state.game?.receiveMatch(data,peerId);
+
   r.onPeerJoin=peerId=>{
-    state.peerCount=Object.keys(r.getPeers?.()||{}).length;
-    // La API actual usa options.target para dirigir un mensaje a un peer concreto.
-    presence.send(presence(),{target:peerId});
-    if(selfId===state.adminId)config.send({mode:state.mode},{target:peerId});
+    console.log('P2P peer joined',peerId);
+    state.peerCount=peerCount();
+    announcePresence(peerId);
+    if(selfId===state.adminId)config.send({mode:state.mode},{target:peerId}).catch?.(()=>{});
     renderLobby();
   };
-  r.onPeerLeave=peerId=>{state.players.delete(peerId);state.peerCount=Object.keys(r.getPeers?.()||{}).length;state.game?.removePeer(peerId);electAdmin();renderLobby()};
+  r.onPeerLeave=peerId=>{
+    console.log('P2P peer left',peerId);
+    state.players.delete(peerId);state.peerCount=peerCount();state.game?.removePeer(peerId);electAdmin();renderLobby();
+  };
 }
 
 function electAdmin(){const all=[...state.players.values()],creators=all.filter(p=>p.creator),pool=creators.length?creators:all;pool.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)||a.id.localeCompare(b.id));state.adminId=pool[0]?.id||selfId}
@@ -84,8 +117,8 @@ function renderLobby(){
   document.querySelectorAll('.class-card').forEach(b=>b.classList.toggle('active',b.dataset.class===state.tankClass));
   const admin=selfId===state.adminId;document.querySelectorAll('.mode-card').forEach(btn=>{btn.disabled=!admin;btn.classList.toggle('active',btn.dataset.mode===state.mode)});
   const start=$('#startGameBtn');if(!admin){start.disabled=true;start.textContent='Esperando al admin…'}else if(state.players.size<2){start.disabled=true;start.textContent='Esperando otro jugador…'}else{start.disabled=false;start.textContent='Comenzar partida'}
-  const peers=Object.keys(state.room.getPeers?.()||{}).length;
-  $('#lobbyStatus').textContent=`${state.players.size} jugador${state.players.size===1?'':'es'} · ${peers} peer${peers===1?'':'s'} WebRTC · build ${BUILD}`;
+  const peers=peerCount();
+  $('#lobbyStatus').textContent=`${state.players.size} jugador${state.players.size===1?'':'es'} · ${peers} peer${peers===1?'':'s'} WebRTC · ${BUILD}`;
 }
 
 function beginGame(data){
@@ -96,5 +129,6 @@ function beginGame(data){
 }
 
 function showMatchEnd(result){$('#matchResult').textContent=result.title;const box=$('#matchScores');box.innerHTML='';(result.scores||[]).forEach(s=>{const r=document.createElement('div');r.className='score-row';r.innerHTML=`<span>${esc(s.name)}</span><strong>${esc(String(s.score))}</strong>`;box.appendChild(r)});$('#matchOverlay').classList.remove('hidden')}
-function leaveRoom(){state.game?.stop();state.game=null;try{state.room?.leave()}catch{}state.room=null;state.players.clear();showScreen('home');$('#homeStatus').textContent=''}
+function cleanupRoom(){clearInterval(state.helloTimer);state.helloTimer=null;state.game?.stop();state.game=null;try{state.room?.leave()}catch{}state.room=null;state.actions={};state.players.clear()}
+function leaveRoom(){cleanupRoom();showScreen('home');$('#homeStatus').textContent=''}
 window.addEventListener('beforeunload',()=>{try{state.room?.leave()}catch{}});
