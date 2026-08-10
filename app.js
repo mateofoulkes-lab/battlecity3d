@@ -1,5 +1,5 @@
 import { joinRoom, selfId } from 'https://esm.run/@trystero-p2p/torrent';
-import { BattleGame } from './game.js?v=20260810b';
+import { BattleGame } from './game.js';
 
 // IMPORTANTE: este ID es permanente. No versionarlo: si cambia, los clientes quedan en namespaces distintos.
 const APP_ID='battlecity3d-mateofoulkes-lab';
@@ -41,7 +41,6 @@ async function enterRoom(create){
   try{
     state.room=joinRoom({appId:APP_ID},code,{onJoinError:details=>{console.error('Trystero join error',details);$('#lobbyStatus').textContent='No se pudo conectar con otro jugador. Revisá red/WebRTC y recargá.'}});
     state.players.clear();state.players.set(selfId,presence());state.adminId=create?selfId:null;setupNetwork();renderLobby();showScreen('lobby');
-    // Se manda ahora y también al evento onPeerJoin; así no dependemos del orden en que conecten.
     state.actions.presence.send(presence());
     setTimeout(()=>{electAdmin();reconcileOwnColor();renderLobby();state.actions.presence.send(presence())},700);
     setTimeout(()=>{if(state.room&&Object.keys(state.room.getPeers?.()||{}).length===0&&state.players.size===1){$('#lobbyStatus').textContent='1 jugador conectado · esperando peers P2P…'}} ,2500);
