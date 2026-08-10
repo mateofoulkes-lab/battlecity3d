@@ -8,21 +8,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#111827" />
   <title>Battle City 3D</title>
-  <link rel="stylesheet" href="./styles.css?v=20260810-1905" />
+  <link rel="stylesheet" href="./styles.css?v=20260810-2025" />
 </head>
 <body>
-  <div id="versionBadge" class="version-badge">v0.9</div>
+  <div id="versionBadge" class="version-badge">v1.0</div>
   <div id="rotateHint" class="rotate-hint">Girá el celular para jugar en horizontal 🔄</div>
   <main id="app">
     <section id="homeScreen" class="screen screen--centered">
       <div class="panel hero-panel">
         <div class="eyebrow">MULTIJUGADOR P2P · WEBRTC</div>
         <h1>BATTLE CITY <span>3D</span></h1>
-        <p class="lead">Tanques, paredes destructibles, power-ups y caos entre amigos.</p>
+        <p class="lead">Prueba de lobby único: todos los jugadores entran al mismo lugar.</p>
         <label class="field"><span>Tu nombre</span><input id="nameInput" maxlength="14" autocomplete="nickname" placeholder="Ej: Mateo" /></label>
         <div class="home-actions">
-          <button id="createRoomBtn" class="btn btn--primary">Crear sala</button>
-          <div class="join-row"><input id="roomCodeInput" maxlength="6" inputmode="text" autocomplete="off" placeholder="CÓDIGO" /><button id="joinRoomBtn" class="btn">Entrar</button></div>
+          <button id="enterLobbyBtn" class="btn btn--primary">Entrar al lobby global</button>
         </div>
         <div id="homeStatus" class="status"></div>
       </div>
@@ -31,7 +30,7 @@
     <section id="lobbyScreen" class="screen hidden">
       <div class="lobby-shell">
         <header class="topbar">
-          <div><div class="eyebrow">SALA</div><div class="room-code" id="roomCodeLabel">------</div></div>
+          <div><div class="eyebrow">SALA ÚNICA</div><div class="room-code">LOBBY GLOBAL</div></div>
           <button id="leaveRoomBtn" class="btn btn--ghost">Salir</button>
         </header>
         <div class="lobby-grid">
@@ -70,7 +69,7 @@
         <div class="hud-pill hud-timer" id="hudTimer">05:00</div>
         <div class="hud-pill" id="hudScore">0</div>
         <div class="hud-pill"><span id="hudShields">🛡️🛡️🛡️</span></div>
-        <div class="hud-pill">Sala <strong id="hudRoom">------</strong></div>
+        <div class="hud-pill">Sala <strong id="hudRoom">GLOBAL</strong></div>
       </div>
       <div id="gameRoot"></div>
       <div id="toast" class="toast"></div>
@@ -79,8 +78,8 @@
       <div id="mobileControls" class="mobile-controls"><div id="joystick" class="joystick"><div id="joystickKnob" class="joystick__knob"></div></div></div>
     </section>
   </main>
-  <script type="module" src="./patches.js?v=20260810-1905"></script>
-  <script type="module" src="./gameplay-tuning.js?v=20260810-1905"></script>
-  <script type="module" src="./app.js?v=20260810-1905"></script>
+  <script type="module" src="./patches.js?v=20260810-2025"></script>
+  <script type="module" src="./gameplay-tuning.js?v=20260810-2025"></script>
+  <script type="module" src="./app.js?v=20260810-2025"></script>
 </body>
 </html>
