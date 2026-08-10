@@ -1,9 +1,10 @@
-import { joinRoom, selfId } from 'https://esm.run/@trystero-p2p/torrent';
+import { joinRoom, selfId } from 'https://esm.run/trystero';
 import { BattleGame } from './game.js';
 
-// IMPORTANTE: este ID es permanente. No versionarlo: si cambia, los clientes quedan en namespaces distintos.
-const APP_ID='battlecity3d-mateofoulkes-lab';
-const BUILD='2026.08.10.1821';
+// Volvemos a la estrategia default (Nostr), que fue la base que conectó correctamente al principio.
+// Este APP_ID queda fijo para que todos los clientes entren al mismo namespace.
+const APP_ID='battlecity3d-mateofoulkes-lab-v1';
+const BUILD='2026.08.10.1852';
 const PALETTE=['#f4c542','#42c96f','#4da3ff','#ef5b5b','#b768ff','#ff8a38','#29d6cf','#f06bc2'];
 const MODES={deathmatch:'Deathmatch','team-deathmatch':'Team Deathmatch',ctf:'Captura la bandera'};
 const $=s=>document.querySelector(s);
@@ -14,7 +15,7 @@ function showScreen(name){Object.entries(screens).forEach(([k,el])=>el.classList
 function normalizeCode(v){return v.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6)}
 function makeCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',a=new Uint32Array(6);crypto.getRandomValues(a);return [...a].map(n=>chars[n%chars.length]).join('')}
 function presence(){return{id:selfId,name:state.name,creator:state.isCreator,joinedAt:state.joinedAt,color:state.color,tankClass:state.tankClass,build:BUILD}}
-function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function esc(s){return String(s).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]))}
 
 $('#nameInput').value=localStorage.getItem('battlecity3d-name')||'';
 $('#roomCodeInput').addEventListener('input',e=>e.target.value=normalizeCode(e.target.value));
@@ -39,11 +40,12 @@ async function enterRoom(create){
   if(state.room){try{state.room.leave()}catch{}}
   state.name=name.slice(0,14);state.roomCode=code;state.isCreator=create;state.joinedAt=Date.now();state.peerCount=0;localStorage.setItem('battlecity3d-name',state.name);$('#homeStatus').textContent='Conectando por WebRTC…';
   try{
-    state.room=joinRoom({appId:APP_ID},code,{onJoinError:details=>{console.error('Trystero join error',details);$('#lobbyStatus').textContent='No se pudo conectar con otro jugador. Revisá red/WebRTC y recargá.'}});
+    state.room=joinRoom({appId:APP_ID},code);
     state.players.clear();state.players.set(selfId,presence());state.adminId=create?selfId:null;setupNetwork();renderLobby();showScreen('lobby');
     state.actions.presence.send(presence());
-    setTimeout(()=>{electAdmin();reconcileOwnColor();renderLobby();state.actions.presence.send(presence())},700);
-    setTimeout(()=>{if(state.room&&Object.keys(state.room.getPeers?.()||{}).length===0&&state.players.size===1){$('#lobbyStatus').textContent='1 jugador conectado · esperando peers P2P…'}} ,2500);
+    // Repetimos presencia durante unos segundos para cubrir el tiempo de descubrimiento/señalización.
+    [500,1500,3000,5000].forEach(ms=>setTimeout(()=>{if(state.room)state.actions.presence?.send(presence())},ms));
+    setTimeout(()=>{electAdmin();reconcileOwnColor();renderLobby()},700);
   }catch(err){console.error(err);$('#homeStatus').textContent='No se pudo abrir la sala.'}
 }
 
@@ -63,6 +65,7 @@ function setupNetwork(){
   match.onMessage=(data,{peerId})=>state.game?.receiveMatch(data,peerId);
   r.onPeerJoin=peerId=>{
     state.peerCount=Object.keys(r.getPeers?.()||{}).length;
+    // La API actual usa options.target para dirigir un mensaje a un peer concreto.
     presence.send(presence(),{target:peerId});
     if(selfId===state.adminId)config.send({mode:state.mode},{target:peerId});
     renderLobby();
