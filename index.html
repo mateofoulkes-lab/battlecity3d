@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#111827" />
+  <title>Battle City 3D</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="rotateHint" class="rotate-hint">Girá el celular para jugar en horizontal 🔄</div>
+
+  <main id="app">
+    <section id="homeScreen" class="screen screen--centered">
+      <div class="panel hero-panel">
+        <div class="eyebrow">MULTIJUGADOR P2P</div>
+        <h1>BATTLE CITY <span>3D</span></h1>
+        <p class="lead">Tanques, paredes destructibles y caos entre amigos.</p>
+
+        <label class="field">
+          <span>Tu nombre</span>
+          <input id="nameInput" maxlength="14" autocomplete="nickname" placeholder="Ej: Mateo" />
+        </label>
+
+        <div class="home-actions">
+          <button id="createRoomBtn" class="btn btn--primary">Crear sala</button>
+          <div class="join-row">
+            <input id="roomCodeInput" maxlength="6" inputmode="text" autocomplete="off" placeholder="CÓDIGO" />
+            <button id="joinRoomBtn" class="btn">Entrar</button>
+          </div>
+        </div>
+
+        <div id="homeStatus" class="status"></div>
+      </div>
+    </section>
+
+    <section id="lobbyScreen" class="screen hidden">
+      <div class="lobby-shell">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">SALA</div>
+            <div class="room-code" id="roomCodeLabel">------</div>
+          </div>
+          <button id="leaveRoomBtn" class="btn btn--ghost">Salir</button>
+        </header>
+
+        <div class="lobby-grid">
+          <div class="panel">
+            <h2>Jugadores</h2>
+            <div id="playersList" class="players-list"></div>
+          </div>
+
+          <div class="panel">
+            <h2>Modo de juego</h2>
+            <div id="modeButtons" class="mode-buttons">
+              <button class="mode-card active" data-mode="deathmatch">
+                <strong>Deathmatch</strong><span>Todos contra todos</span>
+              </button>
+              <button class="mode-card" data-mode="team-deathmatch">
+                <strong>Team Deathmatch</strong><span>Dos equipos</span>
+              </button>
+              <button class="mode-card" data-mode="ctf">
+                <strong>Captura la bandera</strong><span>Robá y volvé a tu base</span>
+              </button>
+            </div>
+            <button id="startGameBtn" class="btn btn--primary btn--wide" disabled>Esperando otro jugador...</button>
+            <div id="lobbyStatus" class="status"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen hidden game-screen">
+      <div id="gameHud" class="hud">
+        <div class="hud-pill"><span id="hudMode">Deathmatch</span></div>
+        <div class="hud-pill">Sala <strong id="hudRoom">------</strong></div>
+        <div class="hud-pill"><span id="hudPlayer">Jugador</span></div>
+      </div>
+      <div id="gameRoot"></div>
+      <div id="toast" class="toast"></div>
+
+      <div id="mobileControls" class="mobile-controls">
+        <div id="joystick" class="joystick">
+          <div id="joystickKnob" class="joystick__knob"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
