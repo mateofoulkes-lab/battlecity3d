@@ -48,10 +48,11 @@
             </div>
             <h2 class="lobby-mode-title">Modo de juego</h2>
             <div id="modeButtons" class="mode-buttons">
-              <button class="mode-card active" data-mode="deathmatch"><strong>Deathmatch</strong><span>10 bajas para ganar</span></button>
-              <button class="mode-card" data-mode="team-deathmatch"><strong>Team Deathmatch</strong><span>Primer equipo a 20 bajas</span></button>
-              <button class="mode-card" data-mode="ctf"><strong>Captura la bandera</strong><span>Primero a 3 capturas</span></button>
+              <button class="mode-card active" data-mode="deathmatch"><strong>Deathmatch</strong><span>10 bajas o más bajas en 5 minutos</span></button>
+              <button class="mode-card" data-mode="team-deathmatch"><strong>Team Deathmatch</strong><span>20 bajas o más bajas en 5 minutos</span></button>
+              <button class="mode-card" data-mode="ctf"><strong>Captura la bandera</strong><span>3 capturas o más puntos en 7 minutos</span></button>
             </div>
+            <div class="tiny-note controls-note">PC: WASD/flechas + mouse/click · Móvil: joystick + tap para apuntar y disparar.</div>
             <button id="startGameBtn" class="btn btn--primary btn--wide" disabled>Esperando otro jugador...</button>
             <div id="lobbyStatus" class="status"></div>
           </div>
@@ -62,6 +63,7 @@
     <section id="gameScreen" class="screen hidden game-screen">
       <div id="gameHud" class="hud">
         <div class="hud-pill"><span id="hudMode">Deathmatch</span></div>
+        <div class="hud-pill hud-timer" id="hudTimer">05:00</div>
         <div class="hud-pill" id="hudScore">0</div>
         <div class="hud-pill"><span id="hudShields">🛡️🛡️🛡️</span></div>
         <div class="hud-pill">Sala <strong id="hudRoom">------</strong></div>
